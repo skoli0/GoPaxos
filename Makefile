@@ -1,4 +1,6 @@
 
+CONTAINER_RUNTIME ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+
 build:
 	@echo "Building Paxos Server"	
 	go build -o paxos/paxos main.go
@@ -9,22 +11,22 @@ test:
 
 provision:
 	@echo "Provisioning Paxos Cluster"	
-	bash scripts/provision.sh
+	CONTAINER_RUNTIME=$(CONTAINER_RUNTIME) bash scripts/provision.sh
 
 paxos-build:
-	@echo "Building Paxos Docker Image"	
-	docker build -t paxos -f Dockerfile .
+	@echo "Building Paxos container image"	
+	$(CONTAINER_RUNTIME) build -t paxos -f Dockerfile .
 
 paxos-run:
-	@echo "Running Single Paxos Docker Container"
-	docker run -p 8080:8080 -d paxos
+	@echo "Running single Paxos container"
+	$(CONTAINER_RUNTIME) run -p 8080:8080 -d paxos
 
 info:
 	echo "Paxos Cluster Nodes"
-	docker ps | grep 'paxos'
-	docker network ls | grep paxos_network
+	$(CONTAINER_RUNTIME) ps | grep 'paxos'
+	$(CONTAINER_RUNTIME) network ls | grep paxos_network
 
 clean:
 	@echo "Cleaning Paxos Cluster"
-	docker ps -a | awk '$$2 ~ /paxos/ {print $$1}' | xargs -I {} docker rm -f {}
-	docker network rm paxos_network
+	$(CONTAINER_RUNTIME) ps -a | awk '$$2 ~ /paxos/ {print $$1}' | xargs -I {} $(CONTAINER_RUNTIME) rm -f {}
+	$(CONTAINER_RUNTIME) network rm paxos_network 2>/dev/null || true

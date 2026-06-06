@@ -1,5 +1,19 @@
 #!/bin/bash
 
+if [[ -n "${CONTAINER_RUNTIME:-}" ]]; then
+    runtime="$CONTAINER_RUNTIME"
+elif command -v podman >/dev/null 2>&1; then
+    runtime="podman"
+elif command -v docker >/dev/null 2>&1; then
+    runtime="docker"
+else
+    echo "Error: neither podman nor docker found in PATH"
+    echo "Install one of them or set CONTAINER_RUNTIME=docker|podman"
+    exit 255
+fi
+
+echo "Using container runtime: $runtime"
+
 # Initialize ENV Variables peers
 # A list of all the ports
 # of the paxos peers
@@ -47,8 +61,8 @@ available_port=8000
 provisioned_ports_count=0
 
 echo "Cleaning previous stale peers"
-docker ps -a | awk '$2 ~ /paxos/ {print $1}' | xargs -I {} docker rm -f {}
-docker network rm "$network"
+$runtime ps -a | awk '$2 ~ /paxos/ {print $1}' | xargs -I {} $runtime rm -f {}
+$runtime network rm "$network" 2>/dev/null || true
 
 echo "Reserving ports for peers"
 
@@ -75,20 +89,20 @@ comma_separated_peers=$(
     echo "${peers[*]}"
 )
 
-# Docker create peers from peer list
+# Create peers from peer list
 # and pass PORT = peers[[i]]
-echo "Provisioning Paxos Docker Cluster"
+echo "Provisioning Paxos Cluster"
 
-echo "Building Paxos Docker Image"
-docker build -t paxos -f Dockerfile .
+echo "Building Paxos container image"
+$runtime build -t paxos -f Dockerfile .
 
 if [[ $? -ne 0 ]]; then
-    echo "Unable To Build Paxos Docker Image"
+    echo "Unable to build Paxos container image"
     exit 255
 fi
 
-echo "Building Paxos Cluster Network"
-docker network create "$network"
+echo "Building Paxos cluster network"
+$runtime network create "$network"
 
 for ((id = 0; id < $peers_count; ++id)); do
     peer_id_list+=(peer-$id)
@@ -100,10 +114,9 @@ comma_separated_peer_id_list=$(
 )
 
 for peer_index in "${!peers[@]}"; do
-    docker run -p "${peers[$peer_index]}":8080 --net $network -e "PEERS="$comma_separated_peer_id_list"" -e "NETWORK="$network"" --name="peer-$peer_index" -d paxos
+    $runtime run -p "${peers[$peer_index]}":8080 --network "$network" -e "PEERS="$comma_separated_peer_id_list"" -e "NETWORK="$network"" --name="peer-$peer_index" -d paxos
 done
 
-# Docker list peers on success
 echo "Paxos Cluster Nodes"
-docker ps | grep 'paxos'
-docker network ls | grep "$network"
+$runtime ps | grep 'paxos'
+$runtime network ls | grep "$network"

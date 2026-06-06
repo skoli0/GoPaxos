@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"../kvstore"
+	"github.com/el10savio/GoPaxos/kvstore"
 )
 
 var (

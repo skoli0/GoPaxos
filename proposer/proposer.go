@@ -3,7 +3,6 @@ package proposer
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -33,7 +32,7 @@ func Prepare(key string, value string) error {
 	for _, peer := range peers {
 		response, err := SendPrepareRequest(peer, uuid)
 		if err != nil {
-			log.Fatalln("error in sending prepare request to peer", peer, ":", err)
+			return fmt.Errorf("error in sending prepare request to peer %s: %w", peer, err)
 		}
 
 		if response == http.StatusOK {
@@ -84,7 +83,7 @@ func Accept(key string, value string, uuid string) error {
 	for _, peer := range peers {
 		response, err := SendAcceptRequest(peer, uuid)
 		if err != nil {
-			log.Fatalln("error in sending accept request to peer", peer, ":", err)
+			return fmt.Errorf("error in sending accept request to peer %s: %w", peer, err)
 		}
 
 		if response == http.StatusOK {
@@ -127,7 +126,7 @@ func Learn(key string, value string) error {
 	for _, peer := range peers {
 		_, err := SendLearnRequest(peer, key, value)
 		if err != nil {
-			log.Fatalln("error in sending learn request to peer", peer, ":", err)
+			return fmt.Errorf("error in sending learn request to peer %s: %w", peer, err)
 		}
 	}
 
@@ -144,7 +143,7 @@ func SendPrepareRequest(peer string, uuid string) (int, error) {
 		return 0, errors.New("empty uuid provided")
 	}
 
-	url := fmt.Sprintf("http://%s.%s/prepare/%s", peer, GetNetwork(), uuid)
+	url := PeerURL(peer, "/prepare/"+uuid)
 
 	return SendRequest(url)
 }
@@ -159,7 +158,7 @@ func SendAcceptRequest(peer string, uuid string) (int, error) {
 		return 0, errors.New("empty uuid provided")
 	}
 
-	url := fmt.Sprintf("http://%s.%s/accept/%s", peer, GetNetwork(), uuid)
+	url := PeerURL(peer, "/accept/"+uuid)
 
 	return SendRequest(url)
 }
@@ -178,7 +177,7 @@ func SendLearnRequest(peer string, key string, value string) (int, error) {
 		return 0, errors.New("empty value provided")
 	}
 
-	url := fmt.Sprintf("http://%s.%s/learn/%s/%s", peer, GetNetwork(), key, value)
+	url := PeerURL(peer, "/learn/"+key+"/"+value)
 
 	return SendRequest(url)
 }

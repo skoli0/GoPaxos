@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"../acceptor"
+	"github.com/el10savio/GoPaxos/acceptor"
 )
 
 // AcceptReceiveHandler is the HTTP handler to process incoming Accept requests

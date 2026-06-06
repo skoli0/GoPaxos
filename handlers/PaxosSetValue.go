@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"../proposer"
+	"github.com/el10savio/GoPaxos/proposer"
 )
 
 // PaxosSetValue is the HTTP handler to process the incoming write message

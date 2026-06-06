@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	"../acceptor"
+	"github.com/el10savio/GoPaxos/acceptor"
 )
 
 // PrepareReceiveHandler is the HTTP handler
