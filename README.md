@@ -1,45 +1,143 @@
 # GoPaxos
 
-Paxos Made Simple, Implemented On Docker Containers
+Paxos Made Simple, Implemented On Docker or Podman Containers
 
 ## Introduction
 
-Paxos is a consensus algorithm used to establish consensus among several nodes in a distributed system. Here, we use Docker to containerize a Paxos cluster node, and Golang to implement the Paxos made simple protocol among every node. Using Paxos the cluster forms a very simple distributed Key-Value Store enabling the user to write and read data across any node in the cluster.
+Paxos is a consensus algorithm used to establish consensus among several nodes in a distributed system. Here, we use containers to run each Paxos cluster node, and Golang to implement the Paxos made simple protocol among every node. Using Paxos the cluster forms a very simple distributed Key-Value Store enabling the user to write and read data across any node in the cluster.
+
+## Container Runtime
+
+GoPaxos supports [Docker](https://www.docker.com/) and [Podman](https://podman.io/). The Makefile and `scripts/provision.sh` auto-detect whichever runtime is available — **Podman is preferred when both are installed**.
+
+Force a specific runtime by passing `CONTAINER_RUNTIME` to any `make` target, or export it for the session:
+
+```bash
+make provision CONTAINER_RUNTIME=docker
+make info CONTAINER_RUNTIME=podman
+
+export CONTAINER_RUNTIME=docker
+make provision
+make clean
+```
+
+When provisioning, the script prints which runtime it selected (e.g. `Using container runtime: podman`).
+
+## Prerequisites (macOS)
+
+You need either Docker or Podman installed and running before provisioning the cluster.
+
+### Option A: Docker Desktop
+
+1. Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/).
+2. Start Docker Desktop and wait until it reports the engine is running.
+3. Verify:
+
+```bash
+docker info
+```
+
+### Option B: Podman
+
+On macOS, Podman runs containers inside a lightweight Linux VM called a Podman machine.
+
+1. Download the installer from [podman.io](https://podman.io/docs/installation), or install via Homebrew:
+
+```bash
+brew install podman
+```
+
+2. Create and start the default VM (required before any `podman` or `make` commands):
+
+```bash
+podman machine init --now
+```
+
+If you already initialized a machine, start it with:
+
+```bash
+podman machine start
+```
+
+3. Verify Podman is ready:
+
+```bash
+podman info
+```
+
+If you see connection errors, restart the machine:
+
+```bash
+podman machine stop
+podman machine start
+```
 
 ## Steps
 
-After cloning the repo. To provision the cluster:
+After cloning the repo, provision the cluster:
 
-```
-$ make provision
-```    
-
-This creates a 3 node Paxos cluster established in their own docker network.
-
-To view the status of the cluster
-
-```
-$ make info
+```bash
+make provision
 ```
 
-Now we can send requests to Set and Get Key-Values to any peer node using its port allocated.
+This creates a 3-node Paxos cluster on its own container network (`paxos_network`). Peer ports are assigned starting at 8000.
 
-```
-$ curl -i localhost:<peer-port>/store/set/<key>/<value>
-$ curl -i localhost:<peer-port>/store/get/<key>
-```
+To provision a different number of peers (must be an odd value ≥ 3):
 
-In the logs for each peer docker container, we can see the logs of the Paxos transaction taking place.
-
-To tear down the cluster and remove the built docker images:
-
-```
-$ make clean
+```bash
+bash scripts/provision.sh 5
 ```
 
-This is not certain to clean up all the locally created docker images at times. You can do a docker rmi to delete them.
+View the status of the cluster:
 
-##  Paxos
+```bash
+make info
+```
+
+Send Set and Get requests to any peer node using its allocated port:
+
+```bash
+curl -i http://localhost:<peer-port>/store/set/<key>/<value>
+curl -i http://localhost:<peer-port>/store/get/<key>
+```
+
+View Paxos transaction logs for a peer (use `docker` or `podman` depending on your runtime):
+
+```bash
+docker logs peer-0
+# or
+podman logs peer-0
+```
+
+To tear down the cluster:
+
+```bash
+make clean
+```
+
+If the image remains after cleanup, remove it manually:
+
+```bash
+docker rmi paxos
+# or
+podman rmi paxos
+```
+
+## Make Targets
+
+| Target        | Description                                      |
+|---------------|--------------------------------------------------|
+| `make provision`   | Build the image and start the Paxos cluster |
+| `make info`        | List running peer containers and network    |
+| `make clean`       | Remove peer containers and the cluster network |
+| `make paxos-build` | Build the `paxos` container image only      |
+| `make paxos-run`   | Run a single Paxos container on port 8080     |
+| `make build`       | Build the Paxos server binary locally       |
+| `make test`        | Run Go tests                                |
+
+All container targets respect `CONTAINER_RUNTIME` (see [Container Runtime](#container-runtime)).
+
+## Paxos
 
 The Paxos consensus algorithm is implemented using Golang running as a Paxos server in each node. Paxos consists of 3 phases:
 
@@ -51,9 +149,12 @@ The Paxos consensus algorithm is implemented using Golang running as a Paxos ser
 
 - **Learn Phase**: Once the above two phases are complete the leader then sends a learn request which enables all the nodes to persist the agreed-upon value to its store.
 
-## Docker
+## Containers
 
-Docker enables each Paxos node to be isolated and can run anywhere. Docker network here establishes a network across all the nodes so that each node can communicate with each other and ingress/egress with the host machine.
+Each Paxos node runs in an isolated container. A shared network (`paxos_network`) connects all peers so they can communicate with each other and expose ports to the host.
+
+- **Docker**: Start Docker Desktop before running `make provision`.
+- **Podman (macOS)**: Ensure the Podman machine is running (`podman machine start`) before provisioning or interacting with the cluster.
 
 ## Simple Paxos vs Multi-Paxos
 

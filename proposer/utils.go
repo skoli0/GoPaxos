@@ -21,10 +21,11 @@ func GetPeerList() []string {
 	return strings.Split(os.Getenv("PEERS"), ",")
 }
 
-// GetNetwork Obtains Network
-// From Environment Variable
-func GetNetwork() string {
-	return os.Getenv("NETWORK") + ":8080"
+const peerPort = "8080"
+
+// PeerURL builds an intra-cluster HTTP URL using the container name.
+func PeerURL(peer string, path string) string {
+	return "http://" + peer + ":" + peerPort + path
 }
 
 // SendRequest handles sending of an HTTP GET Request

@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"./handlers"
+	"github.com/el10savio/GoPaxos/handlers"
 )
 
 const (
